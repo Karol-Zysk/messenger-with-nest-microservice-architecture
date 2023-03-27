@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { PresenceModule } from './presence.module';
 import { ConfigService } from '@nestjs/config';
-import { SharedService } from 'libs/shared';
+import { SharedService } from '@app/shared';
 
 async function bootstrap() {
   const app = await NestFactory.create(PresenceModule);

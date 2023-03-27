@@ -1,4 +1,4 @@
-import { Controller, Get, Inject, Post } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Post } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 
 @Controller()
@@ -40,6 +40,21 @@ export class AppController {
         cmd: 'get-presence',
       },
       {},
+    );
+  }
+
+  @Post('auth/register')
+  async register(
+    @Body('firstName') firstName: string,
+    @Body('lastName') lasttName: string,
+    @Body('email') email: string,
+    @Body('password') password: string,
+  ) {
+    return this.authService.send(
+      {
+        cmd: 'register',
+      },
+      { firstName, lasttName, email, password },
     );
   }
 }

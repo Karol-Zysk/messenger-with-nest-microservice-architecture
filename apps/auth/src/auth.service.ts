@@ -1,9 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { Repository } from 'typeorm';
+import * as bcrypt from 'bcrypt';
 
 import { UserEntity } from './user.entity';
+import { NewUserDTO } from './dtos';
 
 @Injectable()
 export class AuthService {
@@ -16,7 +18,36 @@ export class AuthService {
     return this.userRepository.find();
   }
 
-  async postUser() {
-    return this.userRepository.save({ lastName: 'Barry' });
+  async finfByEmail(email: string): Promise<UserEntity> {
+    return this.userRepository.findOne({
+      where: { email },
+      select: ['email', 'firstName', 'id', 'lastName', 'password'],
+    });
+  }
+
+  async hashPassword(password: string): Promise<string> {
+    return bcrypt.hash(password, 12);
+  }
+
+  async register(newUser: Readonly<NewUserDTO>): Promise<UserEntity> {
+    const { email, firstName, lastName, password } = newUser;
+
+    const existingUser = this.finfByEmail(email);
+
+    if (existingUser)
+      throw new ConflictException('An account with that email already exist');
+
+    const hashPassword = await this.hashPassword(password);
+
+    const savedUser = await this.userRepository.save({
+      email,
+      firstName,
+      lastName,
+      password: hashPassword,
+    });
+
+    delete savedUser.password;
+
+    return savedUser;
   }
 }
