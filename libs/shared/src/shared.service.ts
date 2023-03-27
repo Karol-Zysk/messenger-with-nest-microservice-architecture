@@ -5,11 +5,11 @@ import { RmqContext, RmqOptions, Transport } from '@nestjs/microservices';
 @Injectable()
 export class SharedService {
   constructor(private readonly configService: ConfigService) {}
+
   getRmqOptions(queue: string): RmqOptions {
     const USER = this.configService.get('RABBITMQ_USER');
     const PASSWORD = this.configService.get('RABBITMQ_PASS');
     const HOST = this.configService.get('RABBITMQ_HOST');
-    const QUEUE = this.configService.get('RABBITMQ_AUTH_QUEUE');
 
     return {
       transport: Transport.RMQ,
@@ -24,7 +24,7 @@ export class SharedService {
     };
   }
 
-  acknowladgeMessage(context: RmqContext) {
+  acknowledgeMessage(context: RmqContext) {
     const channel = context.getChannelRef();
     const message = context.getMessage();
     channel.ack(message);

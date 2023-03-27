@@ -13,7 +13,7 @@ export class PresenceController {
 
   @MessagePattern({ cmd: 'get-presence' })
   async getUsers(@Ctx() context: RmqContext) {
-    this.sharedService.acknowladgeMessage(context);
+    this.sharedService.acknowledgeMessage(context);
 
     return this.presenceService.getHello();
   }

@@ -1,7 +1,9 @@
 import { DynamicModule, Module } from '@nestjs/common';
-import { SharedService } from './shared.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ClientProxyFactory, Transport } from '@nestjs/microservices';
+import { AuthGuard } from './auth.guard';
+
+import { SharedService } from './shared.service';
 
 @Module({
   imports: [
@@ -9,9 +11,10 @@ import { ClientProxyFactory, Transport } from '@nestjs/microservices';
       isGlobal: true,
       envFilePath: './.env',
     }),
+    // SharedModule.registerRmq('AUTH_SERVICE', process.env.RABBITMQ_AUTH_QUEUE),
   ],
-  providers: [SharedService],
-  exports: [SharedService],
+  providers: [SharedService, AuthGuard],
+  exports: [SharedService, AuthGuard],
 })
 export class SharedModule {
   static registerRmq(service: string, queue: string): DynamicModule {
@@ -24,15 +27,14 @@ export class SharedModule {
             const USER = configService.get('RABBITMQ_USER');
             const PASSWORD = configService.get('RABBITMQ_PASS');
             const HOST = configService.get('RABBITMQ_HOST');
-            const QUEUE = configService.get('RABBITMQ_AUTH_QUEUE');
+
             return ClientProxyFactory.create({
               transport: Transport.RMQ,
               options: {
                 urls: [`amqp://${USER}:${PASSWORD}@${HOST}`],
-                noAck: false,
-                queue: QUEUE,
+                queue,
                 queueOptions: {
-                  durable: true,
+                  durable: true, // queue survives broker restart
                 },
               },
             });
