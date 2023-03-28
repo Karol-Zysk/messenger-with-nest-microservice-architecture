@@ -1,4 +1,4 @@
-import { UserEntity } from './user.entity';
+import { UserEntity } from '../../../libs/shared/src/entities/user.entity';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';

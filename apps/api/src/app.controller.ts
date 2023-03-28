@@ -46,7 +46,7 @@ export class AppController {
   @Post('auth/register')
   async register(
     @Body('firstName') firstName: string,
-    @Body('lastName') lasttName: string,
+    @Body('lastName') lastName: string,
     @Body('email') email: string,
     @Body('password') password: string,
   ) {
@@ -54,7 +54,7 @@ export class AppController {
       {
         cmd: 'register',
       },
-      { firstName, lasttName, email, password },
+      { firstName, lastName, email, password },
     );
   }
 }
