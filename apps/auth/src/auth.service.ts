@@ -1,27 +1,36 @@
-import { ConflictException, Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import {
+  ConflictException,
+  Injectable,
+  Inject,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 
-import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 
-import { UserEntity } from '../../../libs/shared/src/entities/user.entity';
-import { NewUserDTO } from './dtos';
+import { UserEntity, UserRepositoryInterface } from '@app/shared';
+
+import { ExistingUserDTO } from './dtos/existing-user.dto';
+import { NewUserDTO } from './dtos/new-user.dto';
+
+import { AuthServiceInterface } from './interface/auth.service.interface';
 
 @Injectable()
-export class AuthService {
+export class AuthService implements AuthServiceInterface {
   constructor(
-    @InjectRepository(UserEntity)
-    private readonly userRepository: Repository<UserEntity>,
+    @Inject('UsersRepositoryInterface')
+    private readonly usersRepository: UserRepositoryInterface,
+    private readonly jwtService: JwtService,
   ) {}
 
-  async getUsers() {
-    return this.userRepository.find();
+  async getUsers(): Promise<UserEntity[]> {
+    return await this.usersRepository.findAll();
   }
 
-  async finfByEmail(email: string): Promise<UserEntity> {
-    return this.userRepository.findOne({
+  async findByEmail(email: string): Promise<UserEntity> {
+    return this.usersRepository.findByCondition({
       where: { email },
-      select: ['email', 'firstName', 'id', 'lastName', 'password'],
+      select: ['id', 'firstName', 'lastName', 'email', 'password'],
     });
   }
 
@@ -30,24 +39,73 @@ export class AuthService {
   }
 
   async register(newUser: Readonly<NewUserDTO>): Promise<UserEntity> {
-    const { email, firstName, lastName, password } = newUser;
+    const { firstName, lastName, email, password } = newUser;
 
-    const existingUser = await this.finfByEmail(email);
+    const existingUser = await this.findByEmail(email);
 
-    if (existingUser) {
-      throw new ConflictException('An account that email already exist');
-    }
-    const hashPassword = await this.hashPassword(password);
+    if (existingUser)
+      throw new ConflictException('An account with that email already exists!');
 
-    const savedUser = await this.userRepository.save({
-      email,
+    const hashedPassword = await this.hashPassword(password);
+
+    const savedUser = await this.usersRepository.create({
       firstName,
       lastName,
-      password: hashPassword,
+      email,
+      password: hashedPassword,
     });
 
     delete savedUser.password;
-
     return savedUser;
+  }
+
+  async doesPasswordMatch(
+    password: string,
+    hashedPassword: string,
+  ): Promise<boolean> {
+    return bcrypt.compare(password, hashedPassword);
+  }
+
+  async validateUser(email: string, password: string): Promise<UserEntity> {
+    const user = await this.findByEmail(email);
+
+    const doesUserExist = !!user;
+
+    if (!doesUserExist) return null;
+
+    const doesPasswordMatch = await this.doesPasswordMatch(
+      password,
+      user.password,
+    );
+
+    if (!doesPasswordMatch) return null;
+
+    return user;
+  }
+
+  async login(existingUser: Readonly<ExistingUserDTO>) {
+    const { email, password } = existingUser;
+    const user = await this.validateUser(email, password);
+
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+
+    const jwt = await this.jwtService.signAsync({ user });
+
+    return { token: jwt };
+  }
+
+  async verifyJwt(jwt: string): Promise<{ exp: number }> {
+    if (!jwt) {
+      throw new UnauthorizedException();
+    }
+
+    try {
+      const { exp } = await this.jwtService.verifyAsync(jwt);
+      return { exp };
+    } catch (error) {
+      throw new UnauthorizedException();
+    }
   }
 }
