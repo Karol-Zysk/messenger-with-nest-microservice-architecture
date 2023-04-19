@@ -1,6 +1,18 @@
-import { AuthGuard } from '@app/shared';
-import { Body, Controller, Get, Inject, Post, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Inject,
+  Param,
+  Post,
+  Req,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
+
+import { AuthGuard, UserInterceptor, UserRequest } from '@app/shared';
 
 @Controller()
 export class AppController {
@@ -9,12 +21,7 @@ export class AppController {
     @Inject('PRESENCE_SERVICE') private readonly presenceService: ClientProxy,
   ) {}
 
-  @Get()
-  async foo() {
-    return { foo: 'bar!' };
-  }
-
-  @Get('auth')
+  @Get('users')
   async getUsers() {
     return this.authService.send(
       {
@@ -24,11 +31,53 @@ export class AppController {
     );
   }
 
-  @Post('auth')
-  async postUser() {
+  // Note: This would be done already from the main Facebook App thus simple end point provided to simplify this process.
+  @UseGuards(AuthGuard)
+  @UseInterceptors(UserInterceptor)
+  @Post('add-friend/:friendId')
+  async addFriend(
+    @Req() req: UserRequest,
+    @Param('friendId') friendId: number,
+  ) {
+    if (!req?.user) {
+      throw new BadRequestException();
+    }
+
     return this.authService.send(
       {
-        cmd: 'post-user',
+        cmd: 'add-friend',
+      },
+      {
+        userId: req.user.id,
+        friendId,
+      },
+    );
+  }
+
+  @UseGuards(AuthGuard)
+  @UseInterceptors(UserInterceptor)
+  @Get('get-friends')
+  async getFriends(@Req() req: UserRequest) {
+    if (!req?.user) {
+      throw new BadRequestException();
+    }
+
+    return this.authService.send(
+      {
+        cmd: 'get-friends',
+      },
+      {
+        userId: req.user.id,
+      },
+    );
+  }
+
+  @UseGuards(AuthGuard)
+  @Get('presence')
+  async getPresence() {
+    return this.presenceService.send(
+      {
+        cmd: 'get-presence',
       },
       {},
     );
@@ -45,7 +94,12 @@ export class AppController {
       {
         cmd: 'register',
       },
-      { firstName, lastName, email, password },
+      {
+        firstName,
+        lastName,
+        email,
+        password,
+      },
     );
   }
 
@@ -58,18 +112,10 @@ export class AppController {
       {
         cmd: 'login',
       },
-      { email, password },
-    );
-  }
-
-  @UseGuards(AuthGuard)
-  @Get('presence')
-  async getPresence() {
-    return this.presenceService.send(
       {
-        cmd: 'get-presence',
+        email,
+        password,
       },
-      {},
     );
   }
 }

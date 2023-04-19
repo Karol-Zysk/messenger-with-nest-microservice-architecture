@@ -21,13 +21,13 @@ export class AuthGuard implements CanActivate {
       return false;
     }
 
-    const authHeader = context.switchToHttp().getRequest().headers[
-      'authorization'
-    ] as string;
+    const request = context.switchToHttp().getRequest();
+
+    const authHeader = request.headers['authorization'];
 
     if (!authHeader) return false;
 
-    const authHeaderParts = authHeader.split(' ');
+    const authHeaderParts = (authHeader as string).split(' ');
 
     if (authHeaderParts.length !== 2) return false;
 
