@@ -9,6 +9,7 @@ import {
 import { ClientProxy } from '@nestjs/microservices';
 
 import { Observable, switchMap, catchError } from 'rxjs';
+import { UserJwt } from '../interfaces/user-jwt.interface';
 
 @Injectable()
 export class UserInterceptor implements NestInterceptor {
@@ -30,7 +31,7 @@ export class UserInterceptor implements NestInterceptor {
 
     const [, jwt] = authHeaderParts;
 
-    return this.authService.send({ cmd: 'decode-jwt' }, { jwt }).pipe(
+    return this.authService.send<UserJwt>({ cmd: 'decode-jwt' }, { jwt }).pipe(
       switchMap(({ user }) => {
         request.user = user;
         return next.handle();

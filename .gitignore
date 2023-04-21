@@ -5,3 +5,4 @@
 .env
 /db_volume
 /db
+/redis/data

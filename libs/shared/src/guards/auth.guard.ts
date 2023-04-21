@@ -35,8 +35,6 @@ export class AuthGuard implements CanActivate {
 
     return this.authService.send({ cmd: 'verify-jwt' }, { jwt }).pipe(
       switchMap(({ exp }) => {
-        console.log('elo');
-
         if (!exp) return of(false);
 
         const TOKEN_EXP_MS = exp * 1000;
